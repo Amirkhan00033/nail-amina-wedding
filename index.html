@@ -717,15 +717,15 @@
             <label>Сможете ли вы присутствовать? *</label>
             <div class="radio-group">
               <label class="radio-option">
-                <input type="radio" name="attendance" value="Приду с удовольствием" checked />
+                <input type="radio" name="attendance" value="Приду" checked />
                 <span>Да, с удовольствием приду</span>
               </label>
               <label class="radio-option">
-                <input type="radio" name="attendance" value="Буду с парой / семьёй" />
+                <input type="radio" name="attendance" value="Приду" />
                 <span>Буду с парой / семьёй</span>
               </label>
               <label class="radio-option">
-                <input type="radio" name="attendance" value="К сожалению, не смогу" />
+                <input type="radio" name="attendance" value="Не приду" />
                 <span>К сожалению, не смогу присутствовать</span>
               </label>
             </div>
@@ -784,8 +784,8 @@
         { time: "22:30", title: "Свадебный торт", desc: "Сладкое завершение вечера и бенгальские огни" }
       ],
       dressCodeColors: ["#f3ece1", "#d8c3a5", "#b89768", "#6b5b4b", "#2c2623"],
-      // Сюда вставь URL веб-приложения Google Apps Script для записи в Google Таблицу
-      googleScriptUrl: ""
+      // URL веб-приложения Google Apps Script
+      googleScriptUrl: "https://script.google.com/macros/s/AKfycbz610E8Sy4Sr0p0sV0NRV6EFNcVCZr5c0VH14_NUvNoSm4_7kyCU1cednIXRTrZrEOw0Q/exec"
     };
 
     // Инициализация контента
@@ -843,7 +843,6 @@
 
     openInviteBtn.addEventListener("click", unlockInvitation);
 
-    // Подхватываем воспроизведение при первом взаимодействии, если гость не выключал звук вручную
     document.addEventListener("pointerdown", () => {
       if (!isPlaying && !userManuallyPaused) {
         playMusic();
@@ -969,25 +968,26 @@
       submitBtn.textContent = "Отправляем...";
 
       const formData = new FormData(rsvpForm);
-      const payload = {
-        timestamp: new Date().toLocaleString("ru-RU"),
-        name: formData.get("name"),
-        attendance: formData.get("attendance"),
-        count: formData.get("count"),
-        wishes: formData.get("wishes")
-      };
+      const rawAnswer = String(formData.get("attendance") || "");
+      const normalizedAnswer = rawAnswer.toLowerCase().includes("не") ? "Не приду" : "Приду";
+
+      const params = new URLSearchParams({
+        name: String(formData.get("name") || "").trim(),
+        answer: normalizedAnswer,
+        count: String(formData.get("count") || "1"),
+        wishes: String(formData.get("wishes") || "").trim()
+      });
 
       try {
         if (WEDDING_CONFIG.googleScriptUrl) {
           await fetch(WEDDING_CONFIG.googleScriptUrl, {
             method: "POST",
             mode: "no-cors",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
+            body: params
           });
         } else {
           const saved = JSON.parse(localStorage.getItem("rsvp_demo") || "[]");
-          saved.push(payload);
+          saved.push(Object.fromEntries(params));
           localStorage.setItem("rsvp_demo", JSON.stringify(saved));
         }
 
